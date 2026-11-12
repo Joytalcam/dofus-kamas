@@ -36,6 +36,7 @@ jobs:
           name: debug-html
           path: debug.html
           if-no-files-found: ignore
+          retention-days: 5
 
       - name: Commit y push si hay cambios
         run: |
