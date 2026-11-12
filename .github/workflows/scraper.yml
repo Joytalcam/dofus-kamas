@@ -1,4 +1,3 @@
-@'
 name: Scraping Dofus Kamas
 
 on:
@@ -56,4 +55,3 @@ jobs:
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
           kaggle datasets version -p data/ -m "Actualización automática desde GitHub Actions"
-'@ | Out-File -Encoding utf8 .github\workflows\scraper.yml
