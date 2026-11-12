@@ -1,5 +1,6 @@
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,32 +11,43 @@ from bs4 import BeautifulSoup
 
 URL = "https://www.dofus.com/es/compra-kamas/cotizacion-kama-ogrinas"
 CSV_PATH = Path(__file__).parent / "data" / "kamas.csv"
+DEBUG_PATH = Path(__file__).parent / "debug.html"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
-    )
+    ),
+    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
 
 def fetch_rates():
-    response = requests.get(URL, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, "html.parser")
-    for script in soup.find_all("script"):
-        if script.string and "RATES" in script.string:
-            contenido = script.string
-            idx = contenido.find("RATES = ")
-            if idx == -1:
-                continue
-            inicio = idx + len("RATES = ")
-            fin = contenido.find(";", inicio)
-            if fin == -1:
-                continue
-            rates_json = contenido[inicio:fin].strip()
-            return json.loads(rates_json)
-    raise RuntimeError("No se encontro la variable RATES en el HTML.")
+    for intento in range(3):
+        response = requests.get(URL, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        for script in soup.find_all("script"):
+            if script.string and "RATES" in script.string:
+                contenido = script.string
+                idx = contenido.find("RATES = ")
+                if idx == -1:
+                    continue
+                inicio = idx + len("RATES = ")
+                fin = contenido.find(";", inicio)
+                if fin == -1:
+                    continue
+                rates_json = contenido[inicio:fin].strip()
+                return json.loads(rates_json)
+
+        # Si no encontramos RATES, guardamos el HTML para depurar
+        print(f"Intento {intento + 1}: no se encontró RATES. Guardando HTML en debug.html")
+        DEBUG_PATH.write_text(response.text, encoding="utf-8")
+        time.sleep(5)
+
+    raise RuntimeError("No se encontro la variable RATES tras 3 intentos. Revisa debug.html.")
 
 
 def parse_rates(rates_data):
