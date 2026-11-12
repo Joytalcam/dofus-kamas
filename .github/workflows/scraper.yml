@@ -1,10 +1,9 @@
-name: Scraping Dofus Kamas
+﻿name: Scraping Dofus Kamas
 
 on:
   schedule:
-    # Corre a las 00:00 UTC cada 5 días (días 1, 6, 11, 16, 21, 26, 31 del mes)
     - cron: '0 0 */5 * *'
-  workflow_dispatch:  # Permite ejecutarlo manualmente desde la pestaña Actions
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -45,3 +44,14 @@ jobs:
           git add data/kamas.csv
           git diff --staged --quiet || git commit -m "Actualización automática de datos de kamas"
           git push
+
+      - name: Actualizar dataset en Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          pip install kaggle
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+          kaggle datasets version -p data/ -m "Actualización automática desde GitHub Actions"
