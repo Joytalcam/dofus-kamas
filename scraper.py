@@ -3,9 +3,11 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 import requests
+import wafsolver
 from bs4 import BeautifulSoup
 
 
@@ -24,10 +26,27 @@ HEADERS = {
 
 
 def fetch_rates():
+    domain = urlparse(URL).netloc
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
     for intento in range(3):
-        response = requests.get(URL, headers=HEADERS, timeout=30)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        print(f"Intento {intento + 1}...")
+        res = session.get(URL, timeout=30)
+
+        # Comprobar si AWS WAF nos está desafiando
+        if wafsolver.is_challenged(res.headers):
+            print("  Desafío de AWS WAF detectado. Resolviendo...")
+            try:
+                token = wafsolver.solve_challenge(domain, res.text)
+                # Guardar el token como cookie en la sesión
+                session.cookies.set(wafsolver.TOKEN_COOKIE, token, domain=domain)
+                print("  Token obtenido. Reintentando petición...")
+                res = session.get(URL, timeout=30)
+            except Exception as e:
+                print(f"  Error resolviendo el desafío: {e}")
+
+        soup = BeautifulSoup(res.text, "html.parser")
 
         for script in soup.find_all("script"):
             if script.string and "RATES" in script.string:
@@ -43,8 +62,8 @@ def fetch_rates():
                 return json.loads(rates_json)
 
         # Si no encontramos RATES, guardamos el HTML para depurar
-        print(f"Intento {intento + 1}: no se encontró RATES. Guardando HTML en debug.html")
-        DEBUG_PATH.write_text(response.text, encoding="utf-8")
+        print(f"  No se encontró RATES. Guardando HTML en debug.html")
+        DEBUG_PATH.write_text(res.text, encoding="utf-8")
         time.sleep(5)
 
     raise RuntimeError("No se encontro la variable RATES tras 3 intentos. Revisa debug.html.")
