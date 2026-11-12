@@ -1,4 +1,4 @@
-﻿name: Scraping Dofus Kamas
+name: Scraping Dofus Kamas
 
 on:
   schedule:
@@ -26,6 +26,14 @@ jobs:
 
       - name: Ejecutar scraper
         run: python scraper.py
+
+      - name: Subir debug.html si existe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-html
+          path: debug.html
+          if-no-files-found: ignore
 
       - name: Commit y push si hay cambios
         run: |
