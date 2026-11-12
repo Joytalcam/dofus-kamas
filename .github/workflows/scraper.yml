@@ -1,4 +1,5 @@
-﻿name: Scraping Dofus Kamas
+@'
+name: Scraping Dofus Kamas
 
 on:
   schedule:
@@ -50,8 +51,9 @@ jobs:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          pip install kaggle
+          pip install kaggle six
           mkdir -p ~/.kaggle
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
           kaggle datasets version -p data/ -m "Actualización automática desde GitHub Actions"
+'@ | Out-File -Encoding utf8 .github\workflows\scraper.yml
